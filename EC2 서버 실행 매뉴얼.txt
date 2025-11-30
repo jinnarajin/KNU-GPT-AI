@@ -1,0 +1,104 @@
+로컬 폴더 구조가
+C:\Users\user\knugpt_server\
+│
+├── main.py
+├── config.json
+├── faiss.index
+├── index_tree_db.json
+
+이렇게 된 상태에서 진행
+
+1. AWS 콘솔에서 EC2 인스턴스 생성
+AWS Console → EC2 → Launch Instance
+설정: 이름: knugpt-server
+	AMI: Ubuntu 22.04 LTS
+
+	인스턴스 유형: t3.medium 이상
+
+	키페어: mykey.pem 새로 생성 또는 기존 사용
+
+	보안 그룹 설정:
+
+	유형	                포트	    소스	    설명
+	SSH	                22	    내 IP	    EC2 접속용
+	Custom TCP	5000	    0.0.0.0/0	    FastAPI 서버 접근용
+
+인스턴스 생성 후 퍼블릭 IP 확인
+예: 3.38.101.55
+
+2. 로컬 터미널에서 EC2 접속
+cd C:\Users\user\Downloads
+chmod 400 mykey.pem
+ssh -i "mykey.pem" ubuntu@<EC2_PUBLIC_IP>
+
+
+3. EC2에서 EC2 환경 세팅
+sudo apt update && sudo apt upgrade -y
+sudo apt install python3 python3-pip git -y
+
+
+4. EC2에서 EC2에 프로젝트 폴더 만들기
+mkdir ~/knugpt_server
+cd ~/knugpt_server
+python3 -m venv venv
+source venv/bin/activate (ubuntu)
+.\venv\Scripts\activate (window)
+
+
+5. EC2에서 필요한 패키지 설치
+pip install fastapi uvicorn openai faiss-cpu sentence-transformers numpy
+pip install "uvicorn[standard]" python-multipart
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+
+6. 로컬 터미널에서 로컬 → EC2로 파일 업로드
+cd C:\Users\user\knugpt_server
+scp -i "C:\Users\user\Downloads\mykey.pem" main.py ubuntu@<EC2_PUBLIC_IP>:/home/ubuntu/knugpt_server/
+scp -i "C:\Users\user\Downloads\mykey.pem" config.json ubuntu@<EC2_PUBLIC_IP>:/home/ubuntu/knugpt_server/
+scp -i "C:\Users\user\Downloads\mykey.pem" faiss.index ubuntu@<EC2_PUBLIC_IP>:/home/ubuntu/knugpt_server/
+scp -i "C:\Users\user\Downloads\mykey.pem" index_tree_db.json ubuntu@<EC2_PUBLIC_IP>:/home/ubuntu/knugpt_server/
+
+7. EC2에서 서버 실행
+cd ~/knugpt_server
+source venv/bin/activate
+python main.py
+
+성공 출력 예시
+🚀 모델 로드 중...
+🚀 FAISS 인덱스 로드 중...
+✅ 서버 준비 완료!
+INFO:     Uvicorn running on http://0.0.0.0:5000
+
+8. EC2에서 서버를 백그라운드로 실행
+nohup python main.py > server.log 2>&1 &
+tail -f server.log
+
+9. 로컬 터미널에서 테스트
+curl -X POST "http://<EC2_PUBLIC_IP>:5000/search" \
+-H "Content-Type: application/json" \
+-d '{
+  "Private_Info": {"Name": "홍길동", "Student_ID": 2000000000},
+  "Path": ["IT대학", "전자공학부", "장학금"],
+  "Question": "성적과 상관없이 받을 수 있는 장학금이 뭐가 있어?"
+}'
+
+
+10. putty 로 파일 옮기기
+pscp.exe -i "C:\Users\이동건\Desktop\KNU-GPT.ppk" "C:\Users\이동건\Desktop\KNU GPT\knugpt_server\knugpt_server\3_build_faiss_index.py" ubuntu@43.200.156.40:/home/ubuntu/ai_server
+pscp.exe -i "C:\Users\이동건\Desktop\KNU-GPT.ppk" "C:\Users\이동건\Desktop\KNU GPT\knugpt_server\knugpt_server\3_build_tree_json.py" ubuntu@43.200.156.40:/home/ubuntu/ai_server
+pscp.exe -i "C:\Users\이동건\Desktop\KNU-GPT.ppk" "C:\Users\이동건\Desktop\KNU GPT\knugpt_server\knugpt_server\main.py" ubuntu@43.200.156.40:/home/ubuntu/ai_server
+
+
+
+11. 제공 중인 정보
+1. 학과별 2025년 장학금 정보 o
+2. 학사행정 정보
+3. 대학 소개
+4. 진로 취업정보
+5. 학생활동
+6. 학생지원
+7. 2025 수업 정보 (현재는 일반 선택, 교양만 있음)
+
+
+
+
+
